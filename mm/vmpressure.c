@@ -40,6 +40,8 @@ static unsigned long vmpressure_scale_max = 100;
 
 /* vmpressure values >= this will be scaled based on allocstalls */
 static unsigned long allocstall_threshold = 70;
+module_param_named(vmpressure_scale_max, vmpressure_scale_max,
+			ulong, 0644);
 
 static struct vmpressure global_vmpressure;
 static BLOCKING_NOTIFIER_HEAD(vmpressure_notifier);
@@ -394,9 +396,16 @@ static void vmpressure_global(gfp_t gfp, unsigned long scanned, bool critical,
 		if (!current_is_kswapd())
 			vmpr->stall += scanned;
 
-		stall = vmpr->stall;
-		scanned = vmpr->scanned;
-		reclaimed = vmpr->reclaimed;
+	vmpr->scanned += scanned;
+	vmpr->reclaimed += reclaimed;
+
+	if (!current_is_kswapd())
+		vmpr->stall += scanned;
+
+	stall = vmpr->stall;
+	scanned = vmpr->scanned;
+	reclaimed = vmpr->reclaimed;
+	spin_unlock(&vmpr->sr_lock);
 
 		if (!critical && scanned < calculate_vmpressure_win()) {
 			spin_unlock_irqrestore(&vmpr->sr_lock, flags);
