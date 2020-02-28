@@ -394,9 +394,9 @@ static void vmpressure_global(gfp_t gfp, unsigned long scanned, bool critical,
 		scanned = calculate_vmpressure_win();
 
 	spin_lock_irqsave(&vmpr->sr_lock, flags);
-	if (scanned) {
-		vmpr->scanned += scanned;
-		vmpr->reclaimed += reclaimed;
+
+	if (!scanned)
+		return;
 
 		if (!current_is_kswapd())
 			vmpr->stall += scanned;
