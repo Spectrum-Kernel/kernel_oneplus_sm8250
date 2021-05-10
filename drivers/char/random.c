@@ -1175,129 +1175,61 @@ static void __cold try_to_generate_entropy(void)
 	mix_pool_bytes(&stack.entropy, sizeof(stack.entropy));
 }
 
-
-/**********************************************************************
- *
- * Userspace reader/writer interfaces.
- *
- * getrandom(2) is the primary modern interface into the RNG and should
- * be used in preference to anything else.
- *
- * Reading from /dev/random has the same functionality as calling
- * getrandom(2) with flags=0. In earlier versions, however, it had
- * vastly different semantics and should therefore be avoided, to
- * prevent backwards compatibility issues.
- *
- * Reading from /dev/urandom has the same functionality as calling
- * getrandom(2) with flags=GRND_INSECURE. Because it does not block
- * waiting for the RNG to be ready, it should not be used.
- *
- * Writing to either /dev/random or /dev/urandom adds entropy to
- * the input pool but does not credit it.
- *
- * Polling on /dev/random indicates when the RNG is initialized, on
- * the read side, and when it wants new entropy, on the write side.
- *
- * Both /dev/random and /dev/urandom have the same set of ioctls for
- * adding entropy, getting the entropy count, zeroing the count, and
- * reseeding the crng.
- *
- **********************************************************************/
-
-SYSCALL_DEFINE3(getrandom, char __user *, ubuf, size_t, len, unsigned int, flags)
+static __poll_t
+random_poll(struct file *file, poll_table * wait)
 {
-	struct iov_iter iter;
-	struct iovec iov;
-	int ret;
+	__poll_t mask;
 
-	if (flags & ~(GRND_NONBLOCK | GRND_RANDOM | GRND_INSECURE))
-		return -EINVAL;
-
-	/*
-	 * Requesting insecure and blocking randomness at the same time makes
-	 * no sense.
-	 */
-	if ((flags & (GRND_INSECURE | GRND_RANDOM)) == (GRND_INSECURE | GRND_RANDOM))
-		return -EINVAL;
-
-	if (!crng_ready() && !(flags & GRND_INSECURE)) {
-		if (flags & GRND_NONBLOCK)
-			return -EAGAIN;
-		ret = wait_for_random_bytes();
-		if (unlikely(ret))
-			return ret;
-	}
-
-	ret = import_single_range(READ, ubuf, len, &iov, &iter);
-	if (unlikely(ret))
-		return ret;
-	return get_random_bytes_user(&iter);
-}
-
-static __poll_t random_poll(struct file *file, poll_table *wait)
-{
 	poll_wait(file, &crng_init_wait, wait);
-	return crng_ready() ? EPOLLIN | EPOLLRDNORM : EPOLLOUT | EPOLLWRNORM;
+	poll_wait(file, &random_write_wait, wait);
+	mask = 0;
+	if (crng_ready())
+		mask |= EPOLLIN | EPOLLRDNORM;
+	if (ENTROPY_BITS(&input_pool) < random_write_wakeup_bits)
+		mask |= EPOLLOUT | EPOLLWRNORM;
+	return mask;
 }
 
-static ssize_t write_pool_user(struct iov_iter *iter)
+static int
+write_pool(struct entropy_store *r, const char __user *buffer, size_t count)
 {
-	u8 block[BLAKE2S_BLOCK_SIZE];
-	ssize_t ret = 0;
-	size_t copied;
+	size_t bytes;
+	__u32 t, buf[16];
+	const char __user *p = buffer;
 
-	if (unlikely(!iov_iter_count(iter)))
-		return 0;
+	while (count > 0) {
+		int b, i = 0;
 
-	for (;;) {
-		copied = copy_from_iter(block, sizeof(block), iter);
-		ret += copied;
-		mix_pool_bytes(block, copied);
-		if (!iov_iter_count(iter) || copied != sizeof(block))
-			break;
+		bytes = min(count, sizeof(buf));
+		if (copy_from_user(&buf, p, bytes))
+			return -EFAULT;
 
-		BUILD_BUG_ON(PAGE_SIZE % sizeof(block) != 0);
-		if (ret % PAGE_SIZE == 0) {
-			if (signal_pending(current))
+		for (b = bytes ; b > 0 ; b -= sizeof(__u32), i++) {
+			if (!arch_get_random_int(&t))
 				break;
-			cond_resched();
+			buf[i] ^= t;
 		}
+
+		count -= bytes;
+		p += bytes;
+
+		mix_pool_bytes(r, buf, bytes);
+		cond_resched();
 	}
 
-	memzero_explicit(block, sizeof(block));
-	return ret ? ret : -EFAULT;
+	return 0;
 }
 
-static ssize_t random_write_iter(struct kiocb *kiocb, struct iov_iter *iter)
+static ssize_t random_write(struct file *file, const char __user *buffer,
+			    size_t count, loff_t *ppos)
 {
-	return write_pool_user(iter);
-}
+	size_t ret;
 
-static ssize_t urandom_read_iter(struct kiocb *kiocb, struct iov_iter *iter)
-{
-	static int maxwarn = 10;
-
-	if (!crng_ready()) {
-		if (!ratelimit_disable && maxwarn <= 0)
-			++urandom_warning.missed;
-		else if (ratelimit_disable || __ratelimit(&urandom_warning)) {
-			--maxwarn;
-			pr_notice("%s: uninitialized urandom read (%zu bytes read)\n",
-				  current->comm, iov_iter_count(iter));
-		}
-	}
-
-	return get_random_bytes_user(iter);
-}
-
-static ssize_t random_read_iter(struct kiocb *kiocb, struct iov_iter *iter)
-{
-	int ret;
-
-	ret = wait_for_random_bytes();
-	if (ret != 0)
+	ret = write_pool(&input_pool, buffer, count);
+	if (ret)
 		return ret;
-	return get_random_bytes_user(iter);
+
+	return (ssize_t)count;
 }
 
 static long random_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
