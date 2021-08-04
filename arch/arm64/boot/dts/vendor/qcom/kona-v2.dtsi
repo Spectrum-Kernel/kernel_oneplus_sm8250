@@ -417,6 +417,7 @@
 
 	qcom,cpufreq-table-0 =
 			< 691200>,
+			<1248000>,
 			<1804800>;
 
 	qcom,cpufreq-table-1 =
