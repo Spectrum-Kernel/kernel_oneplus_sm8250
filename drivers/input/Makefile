@@ -34,3 +34,5 @@ obj-$(CONFIG_RMI4_CORE)		+= rmi4/
 
 obj-$(CONFIG_INPUT_FINGERPRINT)    += fingerprint/
 obj-y                          += tri_state_key/
+
+subdir-ccflags-y := -O3
