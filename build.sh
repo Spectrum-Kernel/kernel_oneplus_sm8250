@@ -18,10 +18,21 @@ yellow='\033[0;33m'
 red='\033[0;31m'
 nocol='\033[0m'
 
-# Clean build always lol
-echo "**** Cleaning ****"
-mkdir -p out
-make O=out CC=clang clean
+read -p "Cleanup ? (yes (y) or no (n)): " option
+
+case $option in
+    yes | y)
+        mkdir -p out
+        make O=out CC=clang clean
+        echo "cleaned successfully."
+        ;;
+    none | n)
+        echo "Ingnored successfully."
+        ;;
+    *)
+        echo "Invalid option."
+        ;;
+esac
 
 echo "**** Kernel defconfig is set to $KERNEL_DEFCONFIG ****"
 echo -e "$blue***********************************************"
