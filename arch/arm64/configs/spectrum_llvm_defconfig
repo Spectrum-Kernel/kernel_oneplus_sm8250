@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: Neutrino clang version 13.0.0
+# Compiler: Proton clang version 13.0.0
 #
 CONFIG_GCC_VERSION=0
 CONFIG_CC_IS_CLANG=y
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-NeutrinoKernel-lothal"
+CONFIG_LOCALVERSION="-Spectrum"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_HAVE_KERNEL_GZIP=y
