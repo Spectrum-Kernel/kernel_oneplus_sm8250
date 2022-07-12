@@ -9751,6 +9751,8 @@ int afe_spk_prot_feed_back_cfg(int src_port, int dst_port,
 			AFE_PARAM_ID_FEEDBACK_PATH_CFG, &prot_config,
 			 sizeof(union afe_spkr_prot_config));
 
+#endif
+
 fail_cmd:
 	return ret;
 }
