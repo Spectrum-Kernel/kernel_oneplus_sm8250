@@ -128,7 +128,7 @@
 				<26 512 0 MHZ_TO_KBPS(1353, 4)>, /* index=8  */
 				<26 512 0 MHZ_TO_KBPS(1555, 4)>, /* index=9  */
 				<26 512 0 MHZ_TO_KBPS(1804, 4)>, /* index=10 */
-				<26 512 0 MHZ_TO_KBPS(2092, 4)>; /* index=11 */
+				<26 512 0 MHZ_TO_KBPS(2133, 4)>; /* index=11 */
 		};
 
 		qcom,gpu-bus-table-1 {
@@ -335,6 +335,22 @@
 		/* AOP mailbox for sending ACD enable and disable messages */
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
+
+		qcom,gmu-pwrlevels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "qcom,gmu-pwrlevels";
+			/* GMU power levels must go from lowest to highest */
+			qcom,gmu-pwrlevel@0 {
+				reg = <0>;
+				qcom,gmu-freq = <0>;
+			};
+
+			qcom,gmu-pwrlevel@1 {
+				reg = <1>;
+				qcom,gmu-freq = <500000000>;
+			};
+		};
 
 		gmu_user: gmu_user {
 			compatible = "qcom,smmu-gmu-user-cb";

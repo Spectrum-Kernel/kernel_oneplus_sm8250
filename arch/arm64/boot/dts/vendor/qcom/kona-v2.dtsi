@@ -111,7 +111,7 @@
 		<  300000 MHZ_TO_MBPS( 150, 16) >,
 		<  787200 MHZ_TO_MBPS( 300, 16) >,
 		< 1516800 MHZ_TO_MBPS( 466, 16) >,
-		< 1804800 MHZ_TO_MBPS( 600, 16) >;
+		< 1804800 MHZ_TO_MBPS( 800, 16) >;
 };
 
 &cpu4_cpu_llcc_latmon {
@@ -186,7 +186,7 @@
 		qcom,core-dev-table =
 			< 1862400 MHZ_TO_MBPS( 200, 4) >,
 			< 2745600 MHZ_TO_MBPS(1017, 4) >,
-			< 2841600 MHZ_TO_MBPS(2092, 4) >;
+			< 2841600 MHZ_TO_MBPS(2133, 4) >;
 	};
 
 	ddr5-map {
@@ -417,7 +417,7 @@
 
 	qcom,cpufreq-table-0 =
 			< 691200>,
-			<1708800>;
+			<1804800>;
 
 	qcom,cpufreq-table-1 =
 			< 710400>,
