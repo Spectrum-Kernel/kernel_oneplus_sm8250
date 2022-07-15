@@ -28,6 +28,8 @@
 #define SCM_INTERRUPTED		1
 #define SCM_V2_EBUSY		-12
 
+static atomic_t scm_call_count = ATOMIC_INIT(0);
+
 static DEFINE_MUTEX(scm_lock);
 
 /*
